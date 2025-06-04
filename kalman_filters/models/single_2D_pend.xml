@@ -1,0 +1,48 @@
+<mujoco>
+    <compiler angle = "degree"/>
+    <option timestep = "0.002"/>
+    <option>
+        <flag gravity = "enable" contact = "disable"/>
+    
+    </option>
+    <worldbody>
+        <geom name="floor" type="plane" pos="0 0 -.5" size="2 2 .1" rgba = "1 1 1 1" mass = "0"/>
+        <body name = "propeller_base" pos = "0.1 0 .5" >
+            <!-- <joint type = "free" name = "free_joint"/> -->
+            <geom type = "capsule" size = ".01 .1" axisangle = "0 1 0 90" mass = ".000001"/>
+            <!-- <body name = "propeller_1" pos = ".1 0 0" >
+                <geom name = "propeller_1_stick" type = "cylinder" size = ".01 .025" rgba = "0 1 0 1" mass = "0"/>
+                <site name = "propeller_1_fan" type = "box" size = ".03 .01 .001" pos = "0 0 .022" rgba = "0 1 0 1" />
+            </body>
+            <body name = "propeller_2" pos = "-.1 0 0" >
+                <geom name = "propeller_2_stick" type = "cylinder" size = ".01 .025" rgba = "0 0 1 1" mass = "0"/>
+                <site name = "propeller_2_fan" type = "box" size = ".03 .01 .001" pos = "0 0 .022" rgba = "0 0 1 1" />
+            </body> -->
+            
+
+                <!-- <geom name = "leg_0_stick" type = "capsule" size = "0.001 0.001" pos = "0 0 0" mass = ".0001"/> -->
+            <body name = "leg_1">
+                
+                
+                <joint type = "hinge" name = "prop_base_joint" axis = "0 1 0" pos = "0 0 0"/>
+                
+                <geom type = "box" fromto = "0 0 0 0 0 -.5" name = "leg_1_stick" size = ".01 .01" mass = "1"/>
+                <site size = ".001" name = "IMU_loc" pos = "0 0 -.25"/>
+                <site size = ".0001" name = "leg_end" pos = "0 0 -.5"/>
+                
+                <!-- <body name = "foot" pos = "0 0 -.5" >
+                    <geom type = "box" size = "0.1 0.05 0.01" mass = "0"/>
+                    <joint type = "hinge" axis = "0 1 0" name = "foot_joint"/>
+                </body> -->
+                
+            </body>
+        </body>
+        
+        
+    </worldbody>
+    <sensor>
+        <accelerometer name = "IMU_acc" site = "IMU_loc" noise = ".2"/>
+        <gyro name = "IMU_gyro" site = "IMU_loc" noise = ".2"/>
+
+    </sensor>
+</mujoco>
