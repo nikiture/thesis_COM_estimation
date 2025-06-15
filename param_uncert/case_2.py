@@ -1,21 +1,35 @@
+# try:
+#     import mujoco
+#     import mujoco.viewer
+#     import time
+#     import numpy as np
+#     from matplotlib import pyplot as plt
+#     import math
+#     import random
+#     from filterpy.kalman import ExtendedKalmanFilter
+#     from filterpy.common import Q_discrete_white_noise
+# except Exception as e:
+#     print (e)
+
 import mujoco
-#import mediapy
-#from IPython import display
-#from IPython.display import clear_output
-import mujoco.viewer
-import time
-import numpy as np
-from matplotlib import pyplot as plt
-#import itertools
-import math
-import random
-from filterpy.kalman import ExtendedKalmanFilter
-from filterpy.common import Q_discrete_white_noise
+#import mujoco.viewer
+# import time
+# import numpy as np
+# from matplotlib import pyplot as plt
+# import math
+# import random
+# from filterpy.kalman import ExtendedKalmanFilter
+# from filterpy.common import Q_discrete_white_noise
 
 
     
-
-model = mujoco.MjModel.from_xml_path ("models/2d_pend.xml")
+print ("import complete")
+try:
+    model = mujoco.MjModel.from_xml_path ("models/case_2_pend.xml")
+except Exception as e:
+    print (e)
+    exit()
+#print ("compilation complete")
 #model.opt.timestep = 0.002
 #model = mujoco.MjModel.from_xml_path ("tutorial_models/3D_pendulum_actuator.xml")
 #model.opt.integrator = mujoco.mjtIntegrator.mjINT_RK4
@@ -48,7 +62,7 @@ b_1 = 0.01
 r_2 = 0.05
 
 m1 = data.body("pendulum").cinert[9]
-m2 = data.body("end_mass").cinert[9]
+m2 = data.body("prop_bar").cinert[9]
 
 I = l_1**2 * (m1 / 3 + m2) + 2 / 5 * m2 * r_2**2
 #I = 
