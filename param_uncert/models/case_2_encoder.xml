@@ -22,7 +22,7 @@
             <joint name = "pend_joint" type = "hinge" axis = "0 1 0" pos = "0 0 0"/>
             <geom name = "pend_stick" type = "box" fromto = "0 0 0 0 0 .5" size = ".01 .01" mass = "1"/>
             <!-- <geom name = "pend_stick" type = "cylinder" fromto = "0 0 0 0 0 .5" size = ".01" mass = "1"/> -->
-            <site name = "IMU_1_loc" pos = "0 0 .5"/>
+            <!-- <site name = "IMU_1_loc" pos = "0 0 .5"/> -->
             <body name = "prop_bar" pos = "0 0 .5" gravcomp = "0">
             <!-- <geom name = "pend_stick" type = "box" fromto = "0 0 0 0 0 -.5" size = ".01 .01" mass = "1"/>
             <body name = "end_mass" pos = "0 0 -.5" gravcomp = "0"> -->
@@ -31,8 +31,8 @@
                 <!-- <geom name = "propeller_body" type = "sphere" size = ".05" mass = "10"/> -->
                 <geom name = "propeller_body" type = "box" size = ".01 .01 .1" mass = "1" axisangle = "0 1 0 90"/>
                 <!-- <geom name = "propeller_body" type = "cylinder" size = ".01 .1" mass = "1" axisangle = "0 1 0 90"/> -->
-                <!-- <site name = "IMU_loc" axisangle = "1 0 0 90"/>  -->
-                <site name = "IMU_2_loc" pos = ".1 0 0"/> 
+                <site name = "IMU_loc"/> 
+                <!-- <site name = "IMU_loc" pos = ".1 0 0"/>  -->
                 <site name = "prop_1" pos = "-.1 0 0"/>
                 <site name = "prop_2" pos = ".1 0 0"/>
             </body>
@@ -50,11 +50,10 @@
 
     <sensor>
         <!-- <accelerometer name = "IMU_acc" site = "IMU_loc" noise = ".01"/> -->
-        <accelerometer name = "IMU_1_acc" site = "IMU_1_loc" noise = ".01"/>
-        <gyro name = "IMU_1_gyro" site = "IMU_1_loc" noise = ".01"/>
+        <accelerometer name = "IMU_acc" site = "IMU_loc" noise = ".01"/>
+        <gyro name = "IMU_gyro" site = "IMU_loc" noise = ".01"/>
 
-        <accelerometer name = "IMU_2_acc" site = "IMU_2_loc" noise = ".01"/>
-        <gyro name = "IMU_2_gyro" site = "IMU_2_loc" noise = ".01"/>
+        <jointpos name = "angle_2_sens" joint = "prop_orientation_joint" noise = "0.05"/>
         <!-- <accelerometer name = "IMU_acc" site = "IMU_loc" noise = "0"/>
         <gyro name = "IMU_gyro" site = "IMU_loc" noise = "0"/> -->
     </sensor>
