@@ -61,19 +61,25 @@ class Modif_EKF(ExtendedKalmanFilter):
         c1 = cos(x[0])
         s2 = sin(x[1])
         c2 = cos(x[1])
-        # dx3 = + dt / I * l_1 * sin(x[0]) * g * (m1 / 2 + m2)
-        # dx4 = - dt / I * l_1 * sin(x[0]) * g * (m1 / 2 + m2)
-        dx3 = dt * (+ 1 / I * (l_1 * s1 * g * (m1 / 2 + m2) + l_1 * s2 * (u[0] + u[1]) + l_2 / 2 * (u[0] - u[1])))
         
-        dx4 = - 1 / I * (l_1 * s1 * g * (m1 / 2 + m2) + l_1 * s2 * (u[0] + u[1])) + (1 / I2 - 1 / I) * l_2 / 2 * (u[0] - u[1])
-        dx4*= dt
-        dxa = np.array([0, 0, dx3, dx4]).reshape((4, 1))
-        self.x += dxa
+        I = compute_I1(x[4, 0])
+        I2 = compute_I2(x[5, 0])
+        
+        if abs(I) > 0.001 and abs(I2) > 0.001:
+            
+            # dx3 = + dt / I * l_1 * sin(x[0]) * g * (m1 / 2 + m2)
+            # dx4 = - dt / I * l_1 * sin(x[0]) * g * (m1 / 2 + m2)
+            dx3 = dt * (+ 1 / I * (x[4, 0] * s1 * g * (m1 / 2 + m2) + x[4, 0] * s2 * (u[0] + u[1]) + x[5, 0] / 2 * (u[0] - u[1])))
+            
+            dx4 = - 1 / I * (x[4, 0] * s1 * g * (m1 / 2 + m2) + x[4, 0] * s2 * (u[0] + u[1])) + (1 / I2 - 1 / I) * x[5, 0] / 2 * (u[0] - u[1])
+            dx4*= dt
+            dxa = np.array([0, 0, dx3, dx4, 0, 0]).reshape((-1, 1))
+            self.x += dxa
         x = self.x
         dx1 = dt * x[2, 0]
         dx2 = dt * x[3, 0]
         
-        dxb = np.array([dx1, dx2, 0, 0]).reshape((4, 1))
+        dxb = np.array([dx1, dx2, 0, 0, 0, 0]).reshape((-1, 1))
         self.x += dxb
         
         # dx = np.array([dx1, dx2, dx3, dx4]).reshape((4, 1))
@@ -121,9 +127,16 @@ m2 = model.body("prop_bar").mass[0]
 # I1 = model.body("pendulum").inertia[1]
 # I = I1 + l_1**2 * (m1 / 4 + m2)
 
-I2 = l_2**2 * m2 / 12
-I1 = l_1**2 * m1 / 12
-I = I1 + l_1**2 * (m1 / 4 + m2)
+# I2 = l_2**2 * m2 / 12
+# I1 = l_1**2 * m1 / 12
+# I = I1 + l_1**2 * (m1 / 4 + m2)
+
+def compute_I1(l1):
+    return l1**2 * (m1 / 3 + m2)
+def compute_I2(l2):
+    return l2**2 * m2 / 12
+
+
 
 # print (I1, model.body("pendulum").inertia[1])
 
@@ -154,6 +167,9 @@ sim_vel_sum = []
 est_vel_sum = []
 sim_acc = []
 est_acc = []
+
+est_l_1 = []
+est_l_2 = []
 
 acc_err = []
 dim_z = 6
@@ -205,7 +221,7 @@ dt = model.opt.timestep
 #ekf_theta = ExtendedKalmanFilter (2, 3, 2) #1 dim for angular velocity, 2 for acceleration
 # ekf_theta = Modif_EKF(2, 3, 2)
 # ekf_theta = Modif_EKF(4, 3, 2)
-ekf_theta = Modif_EKF(4, 6, 2)
+ekf_theta = Modif_EKF(6, 6, 2)
 
 ekf_theta.x [0] = data.qpos[0].copy()
 ekf_theta.x [1] = data.qpos[1].copy()
@@ -213,12 +229,19 @@ ekf_theta.x [1] = data.qpos[1].copy()
 ekf_theta.x [2] = data.qvel[0]
 ekf_theta.x [3] = data.qvel[1] 
 
-ekf_theta.x [0] += random.random() * 0.1
+ekf_theta.x[4] = l_1
+ekf_theta.x[5] = l_2
 
-ekf_theta.x [1] += random.random() * 0.1
 
-ekf_theta.x[2] += random.random() * 0.02
-ekf_theta.x[3] += random.random() * 0.02
+# ekf_theta.x [0] += random.random() * 0.1
+
+# ekf_theta.x [1] += random.random() * 0.1
+
+# ekf_theta.x[2] += random.random() * 0.02
+# ekf_theta.x[3] += random.random() * 0.02
+
+# ekf_theta.x[4] += random.random() * 0.03
+# ekf_theta.x[5] += random.random() * 0.03
 
 # ekf_theta.x [0] += 0.1
 
@@ -251,7 +274,7 @@ ekf_theta.Q *= 0.0001 """
 
 #ekf_theta.P *= 10
 
-P_val = np.zeros((4, 0))
+P_val = np.zeros((6, 0))
 
 appl_force = np.zeros(3)
 
@@ -460,6 +483,8 @@ def h_x (x):
     x2 = x[1]
     x3 = x[2]
     x4 = x[3]
+    x5 = x[4]
+    x6 = x[5]
     
     c1 = math.cos(x1)
     s1 = math.sin(x1)
@@ -468,29 +493,29 @@ def h_x (x):
     
     H = np.zeros ((6, 1))
     
+    I = compute_I1(x5)
+    I2 = compute_I2(x6)
+    
     H[0] = x3
     
-    H [1] = l_1 * s1 * g * (m1 / 2 + m2)
-    H [1]+= l_1 * sin(x2) * (f1 + f2)
-    H [1]+= l_2 / 2 * (f1 - f2)
-    H [1]*= l_1 / I * c1
-    H [1]-= l_1 * x3**2 * s1
+    H [1] = x5 * s1 * g * (m1 / 2 + m2)
+    H [1]+= x5 * sin(x2) * (f1 + f2)
+    H [1]+= x6 / 2 * (f1 - f2)
+    H [1]*= x5 / I * c1
+    H [1]-= x5 * x3**2 * s1
     
-    H [2] = l_1 * s1 * g * (m1 / 2 + m2)
-    H [2]+= l_1 * sin(x2) * (f1 + f2)
-    H [2]+= l_2 / 2 * (f1 - f2)
-    H [2]*= - l_1 / I * s1
-    H [2]-= l_1 * x3**2 * c1
+    H [2] = x5 * s1 * g * (m1 / 2 + m2)
+    H [2]+= x5 * sin(x2) * (f1 + f2)
+    H [2]+= x6 / 2 * (f1 - f2)
+    H [2]*= - x5 / I * s1
+    H [2]-= x5 * x3**2 * c1
     
     H [3] = x3 + x4
     
-    H [4] = - l_2 / 2 * (x3 + x4)**2 * cos(x1 + x2) - l_2**2 / (4 * I2) * sin(x1 + x2) * (f1 - f2)
+    H [4] = - x6 / 2 * (x3 + x4)**2 * cos(x1 + x2) - x6**2 / (4 * I2) * sin(x1 + x2) * (f1 - f2) + H [1]
     
-    H [5] = l_2 / 2 * (x3 + x4)**2 * sin(x1 + x2) - l_2**2 / (4 * I2) * cos(x1 + x2) * (f1 - f2)
+    H [5] = x6 / 2 * (x3 + x4)**2 * sin(x1 + x2) - x6**2 / (4 * I2) * cos(x1 + x2) * (f1 - f2) + H [2]
     
-    # H [4] = - l_2 / 2 * (x3**2 + x4**2) * cos(x1 + x2) - l_2**2 / (4 * I2) * sin(x1 + x2) * (f1 - f2)
-    
-    # H [5] = + l_2 / 2 * (x3**2 + x4**2) * sin(x1 + x2) - l_2**2 / (4 * I2) * cos(x1 + x2) * (f1 - f2)
     
     return H.reshape((-1, 1)) 
 
@@ -502,57 +527,102 @@ def H_jac (x):
     x2 = x[1]
     x3 = x[2]
     x4 = x[3]
+    x5 = x[4]
+    x6 = x[5]
+    est_l1 = x5
+    est_l2 = x6
 
     c1 = math.cos(x1)
     s1 = math.sin(x1)
-    H = np.zeros((6, 4))
+    # H = np.zeros((6, 4))
+    H = np.zeros((6, 6))
     # H_test = np.zeros((3, 4))
+    
+    I = compute_I1(est_l1)
+    I2 = compute_I2(est_l2)
     
     
     H [0, 2] = 1
     
     
-    H [1, 0] = l_1 * cos(2 * x1) * g * (m1 / 2 + m2)
-    H [1, 0]-= l_1 * s1 * sin(x2) * (f1 + f2)
-    H [1, 0]-= l_2 / 2 * s1 * (f1 - f2)
-    H [1, 0]*= l_1/I 
-    H [1, 0]-= l_1 * x3**2 * c1
+    H [1, 0] = x5 * cos(2 * x1) * g * (m1 / 2 + m2)
+    H [1, 0]-= x5 * s1 * sin(x2) * (f1 + f2)
+    H [1, 0]-= x6 / 2 * s1 * (f1 - f2)
+    H [1, 0]*= x5 / I 
+    H [1, 0]-= x5 * x3**2 * c1
     
-    H [1, 1] = l_1**2 / I * c1 * cos(x2) * (f1 + f2)
+    H [1, 1] = x5**2 / I * c1 * cos(x2) * (f1 + f2)
     
-    H [1, 2] = - 2 * l_1 * x3 * s1
+    H [1, 2] = - 2 * x5 * x3 * s1
+    
+    H [1, 4] = - x3**2 * sin(x1) - x6 / I * cos(x1) / 2 * (f1 - f2)
+    
+    H [1, 5] = x5 / I * cos(x1) / 2 * (f1 - f2)
     
     
-    H [2, 0] = l_1 * sin(2 * x1) * g * (m1 / 2 + m2)
-    H [2, 0]+= l_1 * c1 * sin(x2) * (f1 + f2)
-    H [2, 0]+= l_2 / 2 * c1 * (f1 - f2)
-    H [2, 0]*= - l_1 / I 
-    H [2, 0]+= l_1 * x3**2 * s1
+    H [2, 0] = x5 * sin(2 * x1) * g * (m1 / 2 + m2)
+    H [2, 0]+= x5 * c1 * sin(x2) * (f1 + f2)
+    H [2, 0]+= x6 / 2 * c1 * (f1 - f2)
+    H [2, 0]*= - x5 / I 
+    H [2, 0]+= x5 * x3**2 * s1
     
-    H [2, 1] = - l_1**2 / I * s1 * cos(x2) * (f1 + f2)
+    H [2, 1] = - x5**2 / I * s1 * cos(x2) * (f1 + f2)
     
-    H [2, 2] = - 2 * l_1 * x3 * c1
+    H [2, 2] = - 2 * x5 * x3 * c1
+    
+    H [2, 4] = - x3**2 * cos(x1) * x6 / I * sin(x1) / 2 * (f1 - f2)
+    
+    H [2, 5] = - x5 / I * sin(x1) / 2 * (f1 - f2)
     
     
     H [3, 2] = 1
     H [3, 3] = 1
     
     
-    H [4, 0] = l_2 / 2 * (x3 + x4)**2 * sin(x1 + x2) - l_2**2 / (4 * I2) * cos(x1 + x2) * (f1 - f2)
+    H [4, 0] = x6 / 2 * (x3 + x4)**2 * sin(x1 + x2) - x6**2 / (4 * I2) * cos(x1 + x2) * (f1 - f2)
     
     H [4, 1] = H [4, 0]
     
-    H [4, 2] = - l_2 * (x3 + x4) * cos(x1 + x2)
+    H [4, 0]+= H [1, 0]
+    
+    H [4, 1]+= H [1, 1]
+    
+    H [4, 2] = - x6 * (x3 + x4) * cos(x1 + x2)
     
     H [4, 3] = H [4, 2]
     
-    H [5, 0] = l_2 / 2 * (x3 + x4)**2 * cos(x1 + x2) + l_2**2 / (4 * I2) * sin(x1 + x2) * (f1 - f2)
+    H [4, 2]+= H [1, 2]
+    
+    H [4, 3]+= H [1, 3]
+    
+    H [4, 5] = - (x3 + x4)**2 / 2 * cos(x1 + x2)
+    
+    H [4, 5]+= H [1, 5]
+    
+    H [4, 4]+= H [1, 4]
+
+    
+    H [5, 0] = x6 / 2 * (x3 + x4)**2 * cos(x1 + x2) + x6 **2 / (4 * I2) * sin(x1 + x2) * (f1 - f2)
     
     H [5, 1] = H [5, 0]
     
-    H [5, 2] = l_2 * (x3 + x4) *sin(x1 + x2)
+    H [5, 0]+= H [2, 0]
+    
+    H [5, 1]+= H [2, 1]
+    
+    H [5, 2] = x6 * (x3 + x4) * sin(x1 + x2)
     
     H [5, 3] = H [5, 2]
+    
+    H [5, 2]+= H [2, 2]
+    
+    H [5, 3]+= H [2, 3]
+    
+    H [5, 5] = (x3 + x4)**2 / 2 * sin(x1 + x2)
+    
+    H [5, 5]+= H [2, 5]
+    
+    H [5, 4]+= H [2, 4]
     
     """ H [4, 0] = l_2 / 2 * (x3**2 + x4**2) * sin(x1 + x2) - l_2**2 / (4 * I2) * cos(x1 + x2) * (f1 - f2)
     
@@ -585,13 +655,13 @@ def compute_z (data, x):
     
     
     
-    ang_data_1 += random.gauss(0, model.sensor("IMU_1_gyro").noise[0])
-    for i in range (0, 3):
-        acc_data_1 [i] += random.gauss(0, model.sensor("IMU_1_acc").noise[0])
+    # ang_data_1 += random.gauss(0, model.sensor("IMU_1_gyro").noise[0])
+    # for i in range (0, 3):
+    #     acc_data_1 [i] += random.gauss(0, model.sensor("IMU_1_acc").noise[0])
     
-    ang_data_2 += random.gauss(0, model.sensor("IMU_1_gyro").noise[0])
-    for i in range (0, 3):
-        acc_data_2 [i] += random.gauss(0, model.sensor("IMU_1_acc").noise[0])
+    # ang_data_2 += random.gauss(0, model.sensor("IMU_1_gyro").noise[0])
+    # for i in range (0, 3):
+    #     acc_data_2 [i] += random.gauss(0, model.sensor("IMU_1_acc").noise[0])
     
     q_est_1 = x[0]
     #q_est = - x[0]
@@ -617,7 +687,7 @@ def compute_z (data, x):
     acc_data_1 += model.opt.gravity#.reshape((3, 1))
     acc_data_2 += model.opt.gravity
     
-    acc_data_2 -= acc_data_1
+    # acc_data_2 -= acc_data_1
     #print (acc_data, data.body("end_mass").cacc[3:] + model.opt.gravity)
     """ sim_acc = l_1 * (data.qacc[0] * np.array([math.cos(data.qpos[0]), 0, - math.sin(data.qpos[0])]) - data.qvel[0]**2 * np.array([math.sin(data.qpos[0]), 0, math.cos(data.qpos[0])])) 
     print (acc_data, sim_acc) """
@@ -725,9 +795,14 @@ with mujoco.viewer.launch_passive(model, data, key_callback= kb_callback) as vie
                 # sim_vel_sum.append(2 * data.qvel[0] + data.qvel[1])
                 # est_vel_sum.append(data.sensor ("IMU_gyro").data[1].copy())
                 
+                est_l_1.append(ekf_theta.x[4].copy())
+                est_l_2.append(ekf_theta.x[5].copy())
+                
                 sim_acc.append(data.qacc[0])
                 x = ekf_theta.x.copy()
                 g = -model.opt.gravity[2]
+                I = compute_I1(ekf_theta.x[4])
+                
                 # est_acc_1 = 1 / I  * (l_1 * sin(x[0]) * g * (m1 / 2 + m2))
                 est_acc_1 = (+ 1 / I * (l_1 * sin(x[0]) * g * (m1 / 2 + m2) + l_1 * sin(x[1]) * (f1 + f2) + l_2 / 2 * (f1 - f2)))
                 est_acc.append(est_acc_1)
@@ -735,7 +810,7 @@ with mujoco.viewer.launch_passive(model, data, key_callback= kb_callback) as vie
                 q_est = ekf_theta.x[0]
                 # #q_est = - ekf_theta.x[0]
                 
-                c_t_est = l_1 * np.array([math.sin(q_est), 0, math.cos(q_est)])  
+                c_t_est = ekf_theta.x[4] * np.array([math.sin(q_est), 0, math.cos(q_est)])  
                 # #print (q_est)  
                 # c_t_est = l_1 / 2 * np.array([math.sin(q_est), 0, math.cos(q_est)])    
                 # #c_t_est = - l_1 / 2 * np.array([math.sin(q_est), 0, math.cos(q_est)]) 
@@ -760,8 +835,8 @@ with mujoco.viewer.launch_passive(model, data, key_callback= kb_callback) as vie
                 q2_est = ekf_theta.x[1]
                 
                 q_rot_est = q1_est + q2_est
-                est_prop1_pos = c_t_est + l_2/2 * np.array([-cos(q_rot_est), 0, sin(q_rot_est)])
-                
+                est_prop1_pos = c_t_est + ekf_theta.x[5] / 2 * np.array([-cos(q_rot_est), 0, sin(q_rot_est)])
+                 
                 mujoco.mjv_initGeom(viewer.user_scn.geoms[2],\
                     type = mujoco.mjtGeom.mjGEOM_LINEBOX, size = .06 * np.ones(3),\
                     pos = data.site("prop_1").xpos, mat = np.eye(3).flatten(), rgba = yellow_color)
@@ -808,12 +883,14 @@ with mujoco.viewer.launch_passive(model, data, key_callback= kb_callback) as vie
                 
                 x = ekf_theta.x.copy()
                 g = - model.opt.gravity[2]
+                I = compute_I1(ekf_theta.x[4])
+                I2 = compute_I2(ekf_theta.x[5])
                 
                 # f1 = 0
                 # f2 = 0
                 
                 
-                F = np.eye(4) + dt * np.eye(4, 4, 2)
+                F = np.eye(6) + dt * np.diag(np.array([1, 1, 0, 0]), 2)
                 
                 
                 # print (F)
@@ -822,17 +899,29 @@ with mujoco.viewer.launch_passive(model, data, key_callback= kb_callback) as vie
                 
                 # F [2, 1] = dt / I * (f1 * (l_1 * math.cos(x[1]) + 2 * l_2 * math.cos(2 * (x[0] + x[1]))) + f2 * l_1 * math.cos(2 * x[0] + x[1]))
                 
-                F [2, 0] = l_1 * cos(x[0]) * g * (m1 / 2 + m2)
+                F [2, 0] = x[4] * cos(x[0]) * g * (m1 / 2 + m2)
                 F [2, 0]*= dt / I 
                 
-                F [2, 1] = l_1 * cos(x[1]) * (f1 + f2)
+                F [2, 1] = x[4] * cos(x[1]) * (f1 + f2)
                 F [2, 1]*= dt / I 
                 
-                F [3, 0] = l_1 * cos(x[0]) * g * (m1 / 2 + m2)
+                F [2, 4] = - dt / I * (sin(x[0]) * g * (m1 / 2 + m2) + sin(x[1] * (f1 + f2)))
+                F [2, 4]+= - dt / I * x[5] / x[4] * (f1 - f2)
+                
+                F [2, 5] = dt / I / 2 * (f1 - f2)
+                
+                
+                F [3, 0] = x[4] * cos(x[0]) * g * (m1 / 2 + m2)
                 F [3, 0]*= - dt / I
                 
-                F [3, 1] = l_1 * cos(x[1]) * (f1 + f2)
+                F [3, 1] = x[4] * cos(x[1]) * (f1 + f2)
                 F [3, 1]*= - dt / I
+                
+                F [3, 4] = dt / I * (sin(x[0]) * g * (m1 / 2 + m2) + sin(x[1]) * (f1 + f2)) 
+                F [3, 4]+= dt / I * x[5] / x[4] * (f1 - f2)
+                
+                F [3, 5] = - dt / 2 * (1 / I2 + 1 / I) * (f1 - f2)
+                
                 
                 
                 
@@ -840,17 +929,17 @@ with mujoco.viewer.launch_passive(model, data, key_callback= kb_callback) as vie
                 
                 B = np.zeros((4, 2))
                 
-                B [2, 0] = l_1 * sin(x[1]) + l_2 / 2
+                B [2, 0] = x[4] * sin(x[1]) + x[5] / 2
                 B [2, 0]*= dt / I
                 
-                B [2, 1] = l_1 * sin(x[1]) - l_2 / 2
+                B [2, 1] = x[4] * sin(x[1]) - x[5] / 2
                 B [2, 1]*= dt / I
                 
                 
-                B [3, 0] = - l_1 / I * sin(x[1]) + (1 / I2 - 1 / I) * l_2 / 2
+                B [3, 0] = - x[4] / I * sin(x[1]) + (1 / I2 - 1 / I) * x[5] / 2
                 B [3, 0]*= dt
                 
-                B [3, 1] = - l_1 / I * sin(x[1]) - (1 / I2 - 1 / I) * l_2 / 2
+                B [3, 1] = - x[4] / I * sin(x[1]) - (1 / I2 - 1 / I) * x[5] / 2
                 B [3, 1]*= dt
                 
                 ekf_theta.B = B.copy()
@@ -870,6 +959,7 @@ with mujoco.viewer.launch_passive(model, data, key_callback= kb_callback) as vie
                     h_est = h_x(ekf_theta.x)
                     
                     ekf_theta.update(z = z, HJacobian = H_jac, Hx = h_x)
+                    
                     #H_jac(ekf_theta.x)
                     # H = H_jac(ekf_theta.x)
                     # P = ekf_theta.P.copy()
@@ -883,7 +973,7 @@ with mujoco.viewer.launch_passive(model, data, key_callback= kb_callback) as vie
                     
                 
                 # print (np.diag(ekf_theta.P))
-                P_val = np.concatenate((P_val, np.diag(ekf_theta.P).reshape((4, 1))), axis = 1)
+                P_val = np.concatenate((P_val, np.diag(ekf_theta.P).reshape((-1, 1))), axis = 1)
                 ekf_count = (ekf_count + 1) % count_max
                 
                 
@@ -915,7 +1005,7 @@ with mujoco.viewer.launch_passive(model, data, key_callback= kb_callback) as vie
 # sim_meas = np.asarray(sim_meas).reshape((3, -1))
 # est_meas = np.asarray(est_meas).reshape((3, -1))
 # print (sim_meas.size)
-fig1, ax = plt.subplots(3, 2, sharex = True)
+fig1, ax = plt.subplots(4, 2, sharex = True)
 
 #ax[0].plot(sim_time, np.array([angle_err, force_norm]).reshape((-1, 2)))
 #ax[0].legend(['theta', 'total force'])
@@ -943,14 +1033,22 @@ ax[2][1].plot(sim_time, [s - e for s,e in zip(sim_acc, est_acc)])
 # ax[2][1].plot(sim_time, [(1 if s > e else -1) for s,e in zip(sim_acc, est_acc)])
 ax[0][0].legend(['sim', 'est'])
 ax[0][1].legend(['sim', 'est'])
+
+ax[3][0].plot(sim_time, est_l_1)
 fig1.waitforbuttonpress()
 
-fig1, ax = plt.subplots(1, 2, sharex = True)
+fig1, ax = plt.subplots(2, 2, sharex = True)
 
-ax[0].plot(sim_time, sim_theta2)
-ax[0].plot(sim_time, est_theta2)
-ax[1].plot(sim_time, [s - e for s, e in zip(sim_theta2, est_theta2)])
-ax[0].legend(['sim', 'est'])
+# ax[0].plot(sim_time, sim_theta2)
+# ax[0].plot(sim_time, est_theta2)
+# ax[1].plot(sim_time, [s - e for s, e in zip(sim_theta2, est_theta2)])
+# ax[0].legend(['sim', 'est'])
+ax[0][0].plot(sim_time, sim_theta2)
+ax[0][0].plot(sim_time, est_theta2)
+ax[0][1].plot(sim_time, [s - e for s, e in zip(sim_theta2, est_theta2)])
+ax[0, 0].legend(['sim', 'est'])
+
+ax[1, 0].plot(sim_time, est_l_2)
 
 close = False
 while(not close):
@@ -961,10 +1059,10 @@ while(not close):
 
 fig1, ax = plt.subplots(dim_z, 2, sharex = True)
 for i in range (dim_z):
-    ax[i][0].plot(sim_time[:-1], sim_meas[i, 1:])
-    ax[i][0].plot(sim_time[:-1], est_meas[i, :-1])
-    # ax[i][0].plot(sim_time[:], sim_meas[i, :])
-    # ax[i][0].plot(sim_time[:], est_meas[i, :])
+    # ax[i][0].plot(sim_time[:-1], sim_meas[i, 1:])
+    # ax[i][0].plot(sim_time[:-1], est_meas[i, :-1])
+    ax[i][0].plot(sim_time[:], sim_meas[i, :])
+    ax[i][0].plot(sim_time[:], est_meas[i, :])
     ax[i][1].plot(sim_time, meas_diff[i, :])
     ax[i][1].legend(['diff'])
     #ax[i].legend(['sim', 'est', 'diff'])

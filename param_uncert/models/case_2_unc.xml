@@ -21,13 +21,13 @@
             <!-- <joint name = "pend_joint" type = "hinge" axis = "0 -1 0" pos = "0 0 0"/> -->
             <joint name = "pend_joint" type = "hinge" axis = "0 1 0" pos = "0 0 0"/>
             <!-- <geom name = "pend_stick" type = "box" fromto = "0 0 0 0 0 .5" size = ".01 .01" mass = "1"/> -->
-            <geom name = "pend_stick" type = "cylinder" fromto = "0 0 0 0 0 .5" size = ".002" mass = "1"/>
+            <geom name = "pend_stick" type = "cylinder" fromto = "0 0 0 0 0 .5" size = ".005" mass = "1"/>
             <site name = "IMU_1_loc" pos = "0 0 .5"/>
             <body name = "prop_bar" pos = "0 0 .5" gravcomp = "0">
             <!-- <geom name = "pend_stick" type = "box" fromto = "0 0 0 0 0 -.5" size = ".01 .01" mass = "1"/>
             <body name = "end_mass" pos = "0 0 -.5" gravcomp = "0"> -->
                 <joint name = "prop_orientation_joint" type = "hinge" axis = "0 1 0"/>
-                <geom name = "propeller_body" type = "cylinder" size = ".005 .1" zaxis = "1 0 0" mass = "1"/>
+                <geom name = "propeller_body" type = "cylinder" size = ".005 .1" zaxis = "1 0 0"/>
                 <!-- <geom name = "propeller_body" type = "sphere" size = ".05" mass = "10"/> -->
                 <!-- <geom name = "propeller_body" type = "box" size = ".01 .01 .1" mass = "1" axisangle = "0 1 0 90"/> -->
                 <!-- <geom name = "propeller_body" type = "cylinder" size = ".01 .1" mass = "1" axisangle = "0 1 0 90"/> -->
