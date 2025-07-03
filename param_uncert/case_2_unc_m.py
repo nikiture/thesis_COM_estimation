@@ -924,7 +924,7 @@ with mujoco.viewer.launch_passive(model, data, key_callback= kb_callback) as vie
                 
                 F [3, 5] = 3 / 2 * x[4] / l_1 * sin(x[0]) * g + 9 / l_1 * sin(x[1]) * (f1 + f2) + 9 / 2 * l_2 / (l_1**2) * (f1 - f2)
                 F [3, 5]*= 1 / ((x[4] + 3 * x[5])**2)
-                F [3, 5]-= 6 * l_2 / (l_1**2) / (x6**2) * (f1 - f2)
+                F [3, 5]-= 6 * l_2 / (l_1**2) / (x[5]**2) * (f1 - f2)
                 F [3, 5]*= dt
                 
                 
@@ -963,7 +963,7 @@ with mujoco.viewer.launch_passive(model, data, key_callback= kb_callback) as vie
                     z = compute_z(data, ekf_theta.x)
                     h_est = h_x(ekf_theta.x)
                     
-                    # ekf_theta.update(z = z, HJacobian = H_jac, Hx = h_x)
+                    ekf_theta.update(z = z, HJacobian = H_jac, Hx = h_x)
                     
                     #H_jac(ekf_theta.x)
                     # H = H_jac(ekf_theta.x)
@@ -1005,6 +1005,8 @@ with mujoco.viewer.launch_passive(model, data, key_callback= kb_callback) as vie
             time.sleep(time_to_step)
            
 
+
+print (ekf_theta.x)
 #print (angle_err)
 # print (sim_meas.size)
 # sim_meas = np.asarray(sim_meas).reshape((3, -1))
@@ -1040,6 +1042,8 @@ ax[0][0].legend(['sim', 'est'])
 ax[0][1].legend(['sim', 'est'])
 
 ax[3][0].plot(sim_time, est_l_1)
+ax[3, 0].plot(sim_time, model.body("pendulum").mass * np.ones(len(sim_time)))
+ax[3, 1].plot(sim_time, est_l_1 - model.body("pendulum").mass)
 fig1.waitforbuttonpress()
 
 fig1, ax = plt.subplots(2, 2, sharex = True)
